@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  homeserver-hub:
+    container_name: homeserver-hub
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: homeserver-hub:latest
+    restart: unless-stopped
+    ports:
+      - "${HOMEPAGE_PORT:-8085}:80"
+    environment:
+      - TZ=Europe/Rome
+    # Opzionale: se desideri mappare direttamente il file services.json dall'host
+    # volumes:
+    #   - ./public/services.json:/usr/share/nginx/html/services.json:ro
+    labels:
+      - "homepage.group=Infrastruttura"
+      - "homepage.name=HomeServer Hub"
+      - "homepage.icon=boxes"
