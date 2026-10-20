@@ -33,6 +33,24 @@ const STORAGE_KEY_SERVICES = 'homeserver_services_v1';
 const STORAGE_KEY_SETTINGS = 'homeserver_settings_v1';
 const STORAGE_KEY_BOOKMARKS = 'homeserver_bookmarks_v1';
 const STORAGE_KEY_WOL = 'homeserver_wol_v1';
+const STORAGE_KEY_WOL_INIT = 'homeserver_wol_init_v1';
+
+const DEFAULT_WOL_DEVICES: WolDevice[] = [
+  {
+    id: 'wol-pc-desktop',
+    name: 'PC Desktop Windows',
+    macAddress: '00:D8:61:4A:8B:20',
+    ip: '192.168.1.150',
+    icon: 'Monitor'
+  },
+  {
+    id: 'wol-nas',
+    name: 'NAS Synology / Storage',
+    macAddress: '00:11:32:9B:4C:1A',
+    ip: '192.168.1.200',
+    icon: 'HardDrive'
+  }
+];
 
 const DEFAULT_SETTINGS: AppSettings = {
   serverHost: window.location.hostname || '192.168.1.100',
@@ -89,14 +107,18 @@ export const App: React.FC = () => {
   // Wol Devices State
   const [wolDevices, setWolDevices] = useState<WolDevice[]>(() => {
     try {
+      const isInit = localStorage.getItem(STORAGE_KEY_WOL_INIT);
       const saved = localStorage.getItem(STORAGE_KEY_WOL);
-      if (saved) {
+      if (isInit === 'true' && saved !== null) {
         return JSON.parse(saved);
       }
+      localStorage.setItem(STORAGE_KEY_WOL_INIT, 'true');
+      localStorage.setItem(STORAGE_KEY_WOL, JSON.stringify(DEFAULT_WOL_DEVICES));
+      return DEFAULT_WOL_DEVICES;
     } catch (e) {
       console.error('Error loading WoL devices from localStorage:', e);
     }
-    return [];
+    return DEFAULT_WOL_DEVICES;
   });
 
   // Settings State
@@ -473,10 +495,11 @@ export const App: React.FC = () => {
   const handleResetServices = () => {
     setServices(DEFAULT_SERVICES);
     setBookmarks(DEFAULT_BOOKMARKS);
-    setWolDevices([]);
+    setWolDevices(DEFAULT_WOL_DEVICES);
     localStorage.removeItem(STORAGE_KEY_SERVICES);
     localStorage.removeItem(STORAGE_KEY_BOOKMARKS);
-    localStorage.removeItem(STORAGE_KEY_WOL);
+    localStorage.setItem(STORAGE_KEY_WOL, JSON.stringify(DEFAULT_WOL_DEVICES));
+    localStorage.setItem(STORAGE_KEY_WOL_INIT, 'true');
   };
 
   // Bookmark handlers

@@ -9,23 +9,6 @@ interface WolHubProps {
   onUpdateDeviceLastWake: (id: string) => void;
 }
 
-const DEFAULT_WOL_DEVICES: WolDevice[] = [
-  {
-    id: 'wol-pc-desktop',
-    name: 'PC Desktop Windows',
-    macAddress: '00:D8:61:4A:8B:20',
-    ip: '192.168.1.150',
-    icon: 'Monitor'
-  },
-  {
-    id: 'wol-nas',
-    name: 'NAS Synology / Storage',
-    macAddress: '00:11:32:9B:4C:1A',
-    ip: '192.168.1.200',
-    icon: 'HardDrive'
-  }
-];
-
 export const WolHub: React.FC<WolHubProps> = ({
   devices,
   onAddDevice,
@@ -38,8 +21,6 @@ export const WolHub: React.FC<WolHubProps> = ({
   const [ip, setIp] = useState('');
   const [icon, setIcon] = useState('Monitor');
   const [wakeFeedback, setWakeFeedback] = useState<string | null>(null);
-
-  const activeDevices = devices.length > 0 ? devices : DEFAULT_WOL_DEVICES;
 
   const handleWake = (dev: WolDevice) => {
     onUpdateDeviceLastWake(dev.id);
@@ -92,13 +73,13 @@ export const WolHub: React.FC<WolHubProps> = ({
             Wake-on-LAN (WoL) Hub
           </h2>
           <span className="text-xs font-normal text-slate-500 font-mono">
-            ({activeDevices.length})
+            ({devices.length})
           </span>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] font-medium text-slate-300 hover:text-white transition-colors"
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-850 border border-slate-800 text-[11px] font-medium text-slate-300 hover:text-white transition-colors cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5 text-emerald-400" />
           <span>Nuovo Dispositivo WoL</span>
@@ -112,61 +93,77 @@ export const WolHub: React.FC<WolHubProps> = ({
         </div>
       )}
 
-      {/* Devices Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-        {activeDevices.map((dev) => {
-          const IconComp = getDeviceIcon(dev.icon);
+      {/* Devices Grid or Empty State */}
+      {devices.length === 0 ? (
+        <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800/60 text-center flex flex-col items-center justify-center py-6">
+          <Power className="w-7 h-7 text-slate-600 mb-2" />
+          <p className="text-xs text-slate-400">Nessun dispositivo Wake-on-LAN salvato.</p>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="mt-2 text-xs text-emerald-400 hover:underline flex items-center gap-1 font-medium cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Aggiungi dispositivo WoL</span>
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {devices.map((dev) => {
+            const IconComp = getDeviceIcon(dev.icon);
 
-          return (
-            <div
-              key={dev.id}
-              className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-850 border border-slate-800/80 hover:border-emerald-500/30 transition-all flex items-center justify-between gap-3 shadow-md shadow-black/10"
-            >
-              <div className="flex items-center gap-3 overflow-hidden">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                  <IconComp className="w-4.5 h-4.5" />
-                </div>
-                <div className="overflow-hidden">
-                  <h3 className="font-semibold text-xs text-slate-100 truncate">
-                    {dev.name}
-                  </h3>
-                  <span className="text-[10px] text-slate-400 font-mono block truncate">
-                    MAC: {dev.macAddress}
-                  </span>
-                  {dev.lastWake && (
-                    <span className="text-[9px] text-slate-500 font-mono block">
-                      Ultimo invio: {dev.lastWake}
+            return (
+              <div
+                key={dev.id}
+                className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-850 border border-slate-800/80 hover:border-emerald-500/30 transition-all flex items-center justify-between gap-3 shadow-md shadow-black/10"
+              >
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                    <IconComp className="w-4.5 h-4.5" />
+                  </div>
+                  <div className="overflow-hidden">
+                    <h3 className="font-semibold text-xs text-slate-100 truncate">
+                      {dev.name}
+                    </h3>
+                    <span className="text-[10px] text-slate-400 font-mono block truncate">
+                      MAC: {dev.macAddress}
                     </span>
-                  )}
+                    {dev.lastWake && (
+                      <span className="text-[9px] text-slate-500 font-mono block">
+                        Ultimo invio: {dev.lastWake}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => handleWake(dev)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-md shadow-emerald-950/40 transition-transform active:scale-95 cursor-pointer"
+                    title="Accendi / Risveglia tramite Magic Packet"
+                  >
+                    <Power className="w-3.5 h-3.5" />
+                    <span>Accendi</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteDevice(dev.id);
+                      setWakeFeedback(`Dispositivo "${dev.name}" rimosso.`);
+                      setTimeout(() => setWakeFeedback(null), 3000);
+                    }}
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                    title="Elimina dispositivo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => handleWake(dev)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs shadow-md shadow-emerald-950/40 transition-transform active:scale-95"
-                  title="Accendi / Risveglia tramite Magic Packet"
-                >
-                  <Power className="w-3.5 h-3.5" />
-                  <span>Accendi</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (confirm(`Eliminare il dispositivo WoL ${dev.name}?`)) {
-                      onDeleteDevice(dev.id);
-                    }
-                  }}
-                  className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-slate-800 transition-colors"
-                  title="Elimina dispositivo"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Add WoL Modal */}
       {isModalOpen && (
