@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Server, Globe, Download, Upload, RotateCcw, Shield, LayoutGrid } from 'lucide-react';
+import { X, Server, Globe, Download, Upload, RotateCcw, Shield, LayoutGrid, Sun, User } from 'lucide-react';
 import type { AppSettings, Service } from '../types/service';
 
 interface SettingsModalProps {
@@ -66,7 +66,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
             <div>
               <h2 className="font-semibold text-lg">Impostazioni Server & Dashboard</h2>
-              <p className="text-xs text-slate-400">Configura indirizzi, modalità di apertura e backup</p>
+              <p className="text-xs text-slate-400">Configura indirizzi, modalità di apertura, meteo e backup</p>
             </div>
           </div>
           <button
@@ -100,6 +100,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
+          {/* User Name & Weather City */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-300 flex items-center gap-1 mb-1.5">
+                <User className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Tuo Nome (per il saluto)</span>
+              </label>
+              <input
+                type="text"
+                value={settings.userName ?? 'Alex'}
+                onChange={(e) => onUpdateSettings({ ...settings, userName: e.target.value })}
+                placeholder="es. Alex"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500/60"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-slate-300 flex items-center gap-1 mb-1.5">
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+                <span>Città per il Meteo</span>
+              </label>
+              <input
+                type="text"
+                value={settings.weatherCity ?? 'Milano'}
+                onChange={(e) => onUpdateSettings({ ...settings, weatherCity: e.target.value })}
+                placeholder="es. Milano, Roma, Torino..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500/60"
+              />
+            </div>
+          </div>
+
           {/* Default Protocol & Open mode */}
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -131,6 +162,26 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
+          {/* Toggle Weather & Greeting */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center gap-3">
+              <Sun className="w-5 h-5 text-amber-400" />
+              <div>
+                <p className="text-sm font-medium">Mostra Banner Saluto & Meteo</p>
+                <p className="text-xs text-slate-400">Previsioni locali automatiche da Open-Meteo e data estesa</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.showWeather !== false}
+                onChange={(e) => onUpdateSettings({ ...settings, showWeather: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+            </label>
+          </div>
+
           {/* Toggle Interactive Widgets */}
           <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
             <div className="flex items-center gap-3">
@@ -143,7 +194,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                checked={settings.enableWidgets ?? true}
+                checked={settings.enableWidgets !== false}
                 onChange={(e) => onUpdateSettings({ ...settings, enableWidgets: e.target.checked })}
                 className="sr-only peer"
               />

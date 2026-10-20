@@ -20,14 +20,27 @@ export const TabBar: React.FC<TabBarProps> = ({
 }) => {
   return (
     <div className="flex items-center bg-slate-950 border-b border-slate-800/80 px-2 pt-1 gap-1 overflow-x-auto no-scrollbar titlebar-drag">
-      {tabs.map((tab) => {
+      {tabs.map((tab, idx) => {
         const isActive = tab.id === activeTabId;
         const isHome = tab.id === 'home';
+        const shortcutNumber = idx + 1 <= 9 ? idx + 1 : null;
 
         return (
           <div
             key={tab.id}
             onClick={() => onSelectTab(tab.id)}
+            onAuxClick={(e) => {
+              // Mouse middle-click closes tab (except home)
+              if (e.button === 1 && !isHome) {
+                e.preventDefault();
+                onCloseTab(tab.id);
+              }
+            }}
+            title={
+              shortcutNumber
+                ? `${tab.title} (Alt+${shortcutNumber} - Tasto centrale per chiudere)`
+                : tab.title
+            }
             className={`group relative flex items-center gap-2 px-3 py-1.5 rounded-t-xl text-xs font-medium cursor-pointer transition-all titlebar-no-drag max-w-[200px] border-t border-x ${
               isActive
                 ? 'bg-slate-900 text-white border-slate-700/80 shadow-md shadow-slate-950/40 z-10'
@@ -53,6 +66,13 @@ export const TabBar: React.FC<TabBarProps> = ({
             {/* Title */}
             <span className="truncate select-none">{tab.title}</span>
 
+            {/* Shortcut number indicator */}
+            {shortcutNumber && (
+              <span className="text-[9px] font-mono opacity-0 group-hover:opacity-60 transition-opacity text-slate-400">
+                Alt+{shortcutNumber}
+              </span>
+            )}
+
             {/* Close button (except for home tab) */}
             {!isHome && (
               <button
@@ -61,7 +81,7 @@ export const TabBar: React.FC<TabBarProps> = ({
                   onCloseTab(tab.id);
                 }}
                 className="p-0.5 rounded-md hover:bg-slate-800 text-slate-500 hover:text-slate-200 transition-colors shrink-0 ml-auto"
-                title="Chiudi scheda"
+                title="Chiudi scheda (Tasto centrale o Ctrl+W)"
               >
                 <X className="w-3 h-3" />
               </button>

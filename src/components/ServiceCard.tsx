@@ -10,6 +10,7 @@ interface ServiceCardProps {
   onSelect: (service: Service) => void;
   onEdit: (service: Service) => void;
   onTogglePin: (serviceId: string) => void;
+  onMiddleClick?: (service: Service) => void;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -18,6 +19,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   onSelect,
   onEdit,
   onTogglePin,
+  onMiddleClick,
 }) => {
   const url = getServiceUrl(service, settings);
   const displayUrl = getDisplayUrl(service);
@@ -30,6 +32,18 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
       window.open(url, '_blank', 'noopener,noreferrer');
     } else {
       onSelect(service);
+    }
+  };
+
+  const handleAuxClick = (e: React.MouseEvent) => {
+    // Middle-click (wheel click) opens directly in a tab
+    if (e.button === 1 && service.hasWebUi && url) {
+      e.preventDefault();
+      if (onMiddleClick) {
+        onMiddleClick(service);
+      } else {
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -53,6 +67,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   return (
     <div
       onClick={service.hasWebUi ? handleClick : undefined}
+      onAuxClick={handleAuxClick}
       className={`group relative rounded-2xl p-4 transition-all duration-200 border ${
         service.hasWebUi
           ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-950/40 bg-slate-900/60 hover:bg-slate-800/80 border-slate-800 hover:border-cyan-500/40'

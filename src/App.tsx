@@ -19,6 +19,7 @@ import { PwaInstallBanner } from './components/PwaInstallBanner';
 import { CommandPalette } from './components/CommandPalette';
 import { TabBar } from './components/TabBar';
 import { WidgetsBar } from './components/WidgetsBar';
+import { WeatherGreeting } from './components/WeatherGreeting';
 import { getServiceUrl } from './utils/url';
 
 const STORAGE_KEY_SERVICES = 'homeserver_services_v1';
@@ -32,6 +33,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   showBackendServices: true,
   viewMode: 'grid',
   enableWidgets: true,
+  userName: 'Alex',
+  weatherCity: 'Milano',
+  showWeather: true,
 };
 
 const HOME_TAB: AppTab = {
@@ -73,6 +77,7 @@ export const App: React.FC = () => {
   // Multi-Tab State
   const [tabs, setTabs] = useState<AppTab[]>([HOME_TAB]);
   const [activeTabId, setActiveTabId] = useState<string>('home');
+  const [closedTabsHistory, setClosedTabsHistory] = useState<AppTab[]>([]);
 
   // UI state
   const [selectedCategory, setSelectedCategory] = useState<string>('Tutti');
@@ -120,16 +125,43 @@ export const App: React.FC = () => {
     }
   }, [services]);
 
-  // Global Keyboard Shortcuts (Ctrl+K, Esc, /)
+  // Global Keyboard Shortcuts (Ctrl+K, Esc, Ctrl+W, Ctrl+Shift+T, Alt+1..9, /)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+K or Cmd+K: Open Command Palette
+      // Alt + 1..9: Switch tab by index
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key >= '1' && e.key <= '9') {
+        const index = parseInt(e.key, 10) - 1;
+        if (index < tabs.length) {
+          e.preventDefault();
+          setActiveTabId(tabs[index].id);
+          return;
+        }
+      }
+
+      // Ctrl + Shift + T: Re-open last closed tab
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 't') {
+        e.preventDefault();
+        if (closedTabsHistory.length > 0) {
+          const lastClosed = closedTabsHistory[closedTabsHistory.length - 1];
+          setClosedTabsHistory((prev) => prev.slice(0, -1));
+          setTabs((prev) => {
+            if (prev.some((t) => t.serviceId === lastClosed.serviceId)) {
+              return prev;
+            }
+            return [...prev, lastClosed];
+          });
+          setActiveTabId(lastClosed.id);
+        }
+        return;
+      }
+
+      // Ctrl + K or Cmd + K: Open Command Palette
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
         setIsCommandPaletteOpen((prev) => !prev);
       }
-      // Ctrl+W: Close active tab if not home
-      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+      // Ctrl + W: Close active tab if not home
+      else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'w') {
         if (activeTabId !== 'home') {
           e.preventDefault();
           handleCloseTab(activeTabId);
@@ -144,7 +176,7 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTabId, isCommandPaletteOpen]);
+  }, [activeTabId, isCommandPaletteOpen, tabs, closedTabsHistory]);
 
   // Open a microservice in Multi-Tab or External
   const handleOpenService = (service: Service) => {
@@ -180,9 +212,13 @@ export const App: React.FC = () => {
     if (tabId === 'home') return;
 
     setTabs((prev) => {
+      const tabToClose = prev.find((t) => t.id === tabId);
+      if (tabToClose) {
+        setClosedTabsHistory((h) => [...h, tabToClose]);
+      }
+
       const newTabs = prev.filter((t) => t.id !== tabId);
       if (activeTabId === tabId) {
-        // Switch to the previous tab or home
         const closingIndex = prev.findIndex((t) => t.id === tabId);
         const nextActive = newTabs[closingIndex - 1] || newTabs[0] || HOME_TAB;
         setActiveTabId(nextActive.id);
@@ -377,6 +413,12 @@ export const App: React.FC = () => {
         className="flex-1 flex-col"
       >
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6">
+          {/* Weather & Dynamic Greeting Banner */}
+          <WeatherGreeting
+            settings={settings}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+
           {/* Interactive Mini-Widgets (MeTube downloader, Portainer hub, Audio) */}
           {settings.enableWidgets !== false && (
             <WidgetsBar
@@ -468,6 +510,7 @@ export const App: React.FC = () => {
                       setIsServiceModalOpen(true);
                     }}
                     onTogglePin={handleTogglePin}
+                    onMiddleClick={handleOpenService}
                   />
                 ))}
               </div>
@@ -503,6 +546,7 @@ export const App: React.FC = () => {
                           setIsServiceModalOpen(true);
                         }}
                         onTogglePin={handleTogglePin}
+                        onMiddleClick={handleOpenService}
                       />
                     ))}
                   </div>
@@ -532,6 +576,7 @@ export const App: React.FC = () => {
                         setIsServiceModalOpen(true);
                       }}
                       onTogglePin={handleTogglePin}
+                      onMiddleClick={handleOpenService}
                     />
                   ))}
                 </div>
@@ -560,10 +605,12 @@ export const App: React.FC = () => {
             </div>
             <div className="flex items-center gap-3 text-[11px]">
               <span className="flex items-center gap-1">
-                <kbd className="px-1 rounded bg-slate-900 border border-slate-800 text-[10px]">Ctrl+K</kbd> Command Palette
+                <kbd className="px-1 rounded bg-slate-900 border border-slate-800 text-[10px]">Alt+1..9</kbd> Schede
               </span>
               <span>•</span>
-              <span>Windows 11 PWA Multi-Tab</span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 rounded bg-slate-900 border border-slate-800 text-[10px]">Ctrl+K</kbd> Command Palette
+              </span>
             </div>
           </div>
         </footer>

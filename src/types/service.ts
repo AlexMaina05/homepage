@@ -36,4 +36,9 @@ export interface AppSettings {
   enableWidgets: boolean;
   portainerApiKey?: string;
   homeAssistantToken?: string;
+  userName?: string;
+  weatherCity?: string;
+  weatherLatitude?: number;
+  weatherLongitude?: number;
+  showWeather?: boolean;
 }
