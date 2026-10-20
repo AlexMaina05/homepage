@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   Search,
   Plus,
@@ -117,6 +117,86 @@ export const App: React.FC = () => {
   const [activeTabId, setActiveTabId] = useState<string>('home');
   const [closedTabsHistory, setClosedTabsHistory] = useState<AppTab[]>([]);
 
+  // Tab Navigation History (supports Mouse Back / Forward buttons & Browser History)
+  const [navHistory, setNavHistory] = useState<string[]>(['home']);
+  const [historyIndex, setHistoryIndex] = useState<number>(0);
+  const navHistoryRef = useRef<string[]>(['home']);
+  const historyIndexRef = useRef<number>(0);
+
+  useEffect(() => {
+    navHistoryRef.current = navHistory;
+  }, [navHistory]);
+
+  useEffect(() => {
+    historyIndexRef.current = historyIndex;
+  }, [historyIndex]);
+
+  // Navigate back in tab history
+  const handleNavigateBack = useCallback(() => {
+    let targetIdx = historyIndexRef.current - 1;
+    while (targetIdx >= 0) {
+      const id = navHistoryRef.current[targetIdx];
+      if (id === 'home' || tabs.some((t) => t.id === id)) {
+        historyIndexRef.current = targetIdx;
+        setHistoryIndex(targetIdx);
+        setActiveTabId(id);
+        try {
+          window.history.replaceState({ tabId: id }, '', window.location.pathname);
+        } catch {
+          // safe
+        }
+        return;
+      }
+      targetIdx--;
+    }
+    setActiveTabId('home');
+  }, [tabs]);
+
+  // Navigate forward in tab history
+  const handleNavigateForward = useCallback(() => {
+    let targetIdx = historyIndexRef.current + 1;
+    while (targetIdx < navHistoryRef.current.length) {
+      const id = navHistoryRef.current[targetIdx];
+      if (id === 'home' || tabs.some((t) => t.id === id)) {
+        historyIndexRef.current = targetIdx;
+        setHistoryIndex(targetIdx);
+        setActiveTabId(id);
+        try {
+          window.history.replaceState({ tabId: id }, '', window.location.pathname);
+        } catch {
+          // safe
+        }
+        return;
+      }
+      targetIdx++;
+    }
+  }, [tabs]);
+
+  const canGoBack = historyIndex > 0;
+  const canGoForward = historyIndex < navHistory.length - 1;
+
+  // Function to switch tab and push to history
+  const switchTab = useCallback((targetTabId: string, addToHistory = true) => {
+    setActiveTabId(targetTabId);
+    if (addToHistory) {
+      const currentInHistory = navHistoryRef.current[historyIndexRef.current];
+      if (targetTabId !== currentInHistory) {
+        const nextHist = [...navHistoryRef.current.slice(0, historyIndexRef.current + 1), targetTabId];
+        const nextIdx = nextHist.length - 1;
+        setNavHistory(nextHist);
+        setHistoryIndex(nextIdx);
+        navHistoryRef.current = nextHist;
+        historyIndexRef.current = nextIdx;
+
+        try {
+          window.history.pushState({ tabId: targetTabId }, '', window.location.pathname);
+        } catch {
+          // safe
+        }
+      }
+    }
+  }, []);
+
   // Modals UI state
   const [selectedCategory, setSelectedCategory] = useState<string>('Tutti');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -185,15 +265,29 @@ export const App: React.FC = () => {
     }
   }, [services]);
 
-  // Global Keyboard Shortcuts (Ctrl+K, Esc, Ctrl+W, Ctrl+Shift+T, Alt+1..9, /)
+  // Global Keyboard Shortcuts (Ctrl+K, Esc, Ctrl+W, Ctrl+Shift+T, Alt+1..9, Alt+Left/Right, /)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt + LeftArrow: Navigate back in tab history
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key === 'ArrowLeft') {
+        e.preventDefault();
+        handleNavigateBack();
+        return;
+      }
+
+      // Alt + RightArrow: Navigate forward in tab history
+      if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key === 'ArrowRight') {
+        e.preventDefault();
+        handleNavigateForward();
+        return;
+      }
+
       // Alt + 1..9: Switch tab by index
       if (e.altKey && !e.ctrlKey && !e.metaKey && e.key >= '1' && e.key <= '9') {
         const index = parseInt(e.key, 10) - 1;
         if (index < tabs.length) {
           e.preventDefault();
-          setActiveTabId(tabs[index].id);
+          switchTab(tabs[index].id);
           return;
         }
       }
@@ -210,7 +304,7 @@ export const App: React.FC = () => {
             }
             return [...prev, lastClosed];
           });
-          setActiveTabId(lastClosed.id);
+          switchTab(lastClosed.id);
         }
         return;
       }
@@ -236,7 +330,47 @@ export const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeTabId, isCommandPaletteOpen, tabs, closedTabsHistory]);
+  }, [activeTabId, isCommandPaletteOpen, tabs, closedTabsHistory, handleNavigateBack, handleNavigateForward, switchTab]);
+
+  // Support Mouse Back (button 3 / X1) and Mouse Forward (button 4 / X2)
+  useEffect(() => {
+    const handleMouseNav = (e: MouseEvent) => {
+      // 3 = Back button, 4 = Forward button on standard mice
+      if (e.button === 3) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleNavigateBack();
+      } else if (e.button === 4) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleNavigateForward();
+      }
+    };
+
+    window.addEventListener('mouseup', handleMouseNav);
+    window.addEventListener('auxclick', handleMouseNav);
+    return () => {
+      window.removeEventListener('mouseup', handleMouseNav);
+      window.removeEventListener('auxclick', handleMouseNav);
+    };
+  }, [handleNavigateBack, handleNavigateForward]);
+
+  // Support Browser History PopState (browser back/forward buttons)
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tabId) {
+        const targetId = e.state.tabId;
+        if (targetId === 'home' || tabs.some((t) => t.id === targetId)) {
+          setActiveTabId(targetId);
+        } else {
+          setActiveTabId('home');
+        }
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [tabs]);
 
   // Open a microservice in Multi-Tab or External
   const handleOpenService = (service: Service) => {
@@ -251,7 +385,7 @@ export const App: React.FC = () => {
 
     const existingTab = tabs.find((t) => t.serviceId === service.id);
     if (existingTab) {
-      setActiveTabId(existingTab.id);
+      switchTab(existingTab.id);
     } else {
       const newTab: AppTab = {
         id: `tab-${service.id}-${Date.now()}`,
@@ -262,7 +396,7 @@ export const App: React.FC = () => {
         color: service.color
       };
       setTabs((prev) => [...prev, newTab]);
-      setActiveTabId(newTab.id);
+      switchTab(newTab.id);
     }
   };
 
@@ -280,7 +414,7 @@ export const App: React.FC = () => {
       if (activeTabId === tabId) {
         const closingIndex = prev.findIndex((t) => t.id === tabId);
         const nextActive = newTabs[closingIndex - 1] || newTabs[0] || HOME_TAB;
-        setActiveTabId(nextActive.id);
+        switchTab(nextActive.id, false);
       }
       return newTabs;
     });
@@ -390,7 +524,7 @@ export const App: React.FC = () => {
           <div className="flex items-center justify-between w-full md:w-auto gap-3 titlebar-no-drag">
             <div className="flex items-center gap-2.5">
               <button
-                onClick={() => setActiveTabId('home')}
+                onClick={() => switchTab('home')}
                 className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1px] shadow-lg shadow-cyan-950/50 hover:scale-105 transition-transform"
                 title="Torna alla Home"
               >
@@ -496,13 +630,17 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Multi-Tab Bar */}
+      {/* Multi-Tab Bar with Back / Forward history */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
-        onSelectTab={(tabId) => setActiveTabId(tabId)}
+        onSelectTab={(tabId) => switchTab(tabId)}
         onCloseTab={handleCloseTab}
         onNewTabClick={() => setIsCommandPaletteOpen(true)}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        onNavigateBack={handleNavigateBack}
+        onNavigateForward={handleNavigateForward}
       />
 
       {/* Main View Area: Dashboard Tab (DOM kept alive) */}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Plus, LayoutDashboard } from 'lucide-react';
+import { X, Plus, LayoutDashboard, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { AppTab } from '../types/service';
 import { ServiceIcon } from './ServiceIcon';
 
@@ -9,6 +9,10 @@ interface TabBarProps {
   onSelectTab: (tabId: string) => void;
   onCloseTab: (tabId: string) => void;
   onNewTabClick: () => void;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  onNavigateBack?: () => void;
+  onNavigateForward?: () => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -17,9 +21,44 @@ export const TabBar: React.FC<TabBarProps> = ({
   onSelectTab,
   onCloseTab,
   onNewTabClick,
+  canGoBack = false,
+  canGoForward = false,
+  onNavigateBack,
+  onNavigateForward,
 }) => {
   return (
     <div className="flex items-center bg-slate-950 border-b border-slate-800/80 px-2 pt-1 gap-1 overflow-x-auto no-scrollbar titlebar-drag">
+      {/* Navigation history buttons (Mouse Back / Forward support) */}
+      <div className="flex items-center gap-0.5 mr-1 titlebar-no-drag shrink-0">
+        <button
+          type="button"
+          onClick={onNavigateBack}
+          disabled={!canGoBack}
+          className={`p-1.5 rounded-lg transition-colors ${
+            canGoBack
+              ? 'text-slate-300 hover:text-white hover:bg-slate-850 cursor-pointer active:scale-95'
+              : 'text-slate-700 cursor-not-allowed opacity-50'
+          }`}
+          title="Indietro (Tasto Mouse 4 / Alt+←)"
+          aria-label="Scheda precedente"
+        >
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onNavigateForward}
+          disabled={!canGoForward}
+          className={`p-1.5 rounded-lg transition-colors ${
+            canGoForward
+              ? 'text-slate-300 hover:text-white hover:bg-slate-850 cursor-pointer active:scale-95'
+              : 'text-slate-700 cursor-not-allowed opacity-50'
+          }`}
+          title="Avanti (Tasto Mouse 5 / Alt+→)"
+          aria-label="Scheda successiva"
+        >
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
       {tabs.map((tab, idx) => {
         const isActive = tab.id === activeTabId;
         const isHome = tab.id === 'home';

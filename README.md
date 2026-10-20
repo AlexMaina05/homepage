@@ -57,6 +57,8 @@ Se preferisci avviarla direttamente dall'interfaccia di Portainer visibile nei t
 | **`Ctrl + Shift + T`** | Riapri l'ultima scheda chiusa (con cronologia sessione) |
 | **`Ctrl + W`** o **`ESC`** | Chiudi la scheda corrente e torna alla Dashboard |
 | **`/`** | Metti a fuoco il campo di ricerca e filtraggio dei servizi |
+| **Tasti laterali mouse (Indietro / Avanti)** | Naviga indietro e avanti nella cronologia delle schede aperte |
+| **`Alt + ←` / `Alt + →`** | Scorciatoia da tastiera per navigare indietro / avanti tra le schede |
 | **Click con rotellina (tasto centrale)** | Clicca su una card per aprirla in una nuova scheda; clicca su una tab per chiuderla |
 
 ---
