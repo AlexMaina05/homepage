@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { X, Server, Globe, Download, Upload, RotateCcw, Shield } from 'lucide-react';
+import { X, Server, Globe, Download, Upload, RotateCcw, Shield, LayoutGrid } from 'lucide-react';
 import type { AppSettings, Service } from '../types/service';
 
 interface SettingsModalProps {
@@ -78,7 +78,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         </div>
 
         {/* Content body */}
-        <div className="py-4 space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="py-4 space-y-4 max-h-[70vh] overflow-y-auto pr-1">
           {/* Server Host */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-slate-300 flex items-center justify-between">
@@ -100,7 +100,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </p>
           </div>
 
-          {/* Default Protocol */}
+          {/* Default Protocol & Open mode */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-300 block mb-1.5">
@@ -125,10 +125,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 onChange={(e) => onUpdateSettings({ ...settings, openMode: e.target.value as 'iframe' | 'new_tab' })}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500/60"
               >
-                <option value="iframe">All'interno della stessa app (PWA)</option>
+                <option value="iframe">In schede interne (Multi-Tab PWA)</option>
                 <option value="new_tab">In nuova scheda del browser</option>
               </select>
             </div>
+          </div>
+
+          {/* Toggle Interactive Widgets */}
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-950/60 border border-slate-800/80">
+            <div className="flex items-center gap-3">
+              <LayoutGrid className="w-5 h-5 text-cyan-400" />
+              <div>
+                <p className="text-sm font-medium">Mostra Mini-Widget Interattivi</p>
+                <p className="text-xs text-slate-400">Pannelli rapidi MeTube downloader, Portainer hub e musica</p>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.enableWidgets ?? true}
+                onChange={(e) => onUpdateSettings({ ...settings, enableWidgets: e.target.checked })}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+            </label>
           </div>
 
           {/* Toggle Backend Services */}

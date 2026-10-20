@@ -5,15 +5,21 @@ import {
   Settings as SettingsIcon,
   Server,
   Star,
-  Boxes
+  Boxes,
+  Command,
+  X
 } from 'lucide-react';
-import type { Service, ServiceCategory, AppSettings } from './types/service';
+import type { Service, ServiceCategory, AppSettings, AppTab } from './types/service';
 import { DEFAULT_SERVICES } from './data/defaultServices';
 import { ServiceCard } from './components/ServiceCard';
 import { EmbeddedViewer } from './components/EmbeddedViewer';
 import { SettingsModal } from './components/SettingsModal';
 import { ServiceModal } from './components/ServiceModal';
 import { PwaInstallBanner } from './components/PwaInstallBanner';
+import { CommandPalette } from './components/CommandPalette';
+import { TabBar } from './components/TabBar';
+import { WidgetsBar } from './components/WidgetsBar';
+import { getServiceUrl } from './utils/url';
 
 const STORAGE_KEY_SERVICES = 'homeserver_services_v1';
 const STORAGE_KEY_SETTINGS = 'homeserver_settings_v1';
@@ -25,6 +31,16 @@ const DEFAULT_SETTINGS: AppSettings = {
   theme: 'dark',
   showBackendServices: true,
   viewMode: 'grid',
+  enableWidgets: true,
+};
+
+const HOME_TAB: AppTab = {
+  id: 'home',
+  serviceId: 'home',
+  title: 'Dashboard',
+  icon: 'Boxes',
+  url: '',
+  color: '#38bdf8'
 };
 
 export const App: React.FC = () => {
@@ -54,12 +70,16 @@ export const App: React.FC = () => {
     return DEFAULT_SETTINGS;
   });
 
+  // Multi-Tab State
+  const [tabs, setTabs] = useState<AppTab[]>([HOME_TAB]);
+  const [activeTabId, setActiveTabId] = useState<string>('home');
+
   // UI state
-  const [activeService, setActiveService] = useState<Service | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tutti');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState<boolean>(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
   const [serviceToEdit, setServiceToEdit] = useState<Service | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
 
@@ -75,7 +95,7 @@ export const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
   }, [settings]);
 
-  // Update clock every second
+  // Clock
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -88,30 +108,98 @@ export const App: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Keyboard shortcut listener: `/` to search
+  // Jump List query param support (?open=portainer, etc.)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const openParam = params.get('open');
+    if (openParam) {
+      const targetService = services.find((s) => s.id === openParam);
+      if (targetService) {
+        handleOpenService(targetService);
+      }
+    }
+  }, [services]);
+
+  // Global Keyboard Shortcuts (Ctrl+K, Esc, /)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+      // Ctrl+K or Cmd+K: Open Command Palette
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen((prev) => !prev);
+      }
+      // Ctrl+W: Close active tab if not home
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w') {
+        if (activeTabId !== 'home') {
+          e.preventDefault();
+          handleCloseTab(activeTabId);
+        }
+      }
+      // Slash: Focus search bar
+      else if (e.key === '/' && document.activeElement !== searchInputRef.current && !isCommandPaletteOpen) {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [activeTabId, isCommandPaletteOpen]);
 
-  // Filtered services
+  // Open a microservice in Multi-Tab or External
+  const handleOpenService = (service: Service) => {
+    if (!service.hasWebUi) return;
+    const url = getServiceUrl(service, settings);
+    if (!url) return;
+
+    if (settings.openMode === 'new_tab') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    // Check if a tab for this service already exists
+    const existingTab = tabs.find((t) => t.serviceId === service.id);
+    if (existingTab) {
+      setActiveTabId(existingTab.id);
+    } else {
+      const newTab: AppTab = {
+        id: `tab-${service.id}-${Date.now()}`,
+        serviceId: service.id,
+        title: service.name,
+        icon: service.icon,
+        url: url,
+        color: service.color
+      };
+      setTabs((prev) => [...prev, newTab]);
+      setActiveTabId(newTab.id);
+    }
+  };
+
+  // Close a tab
+  const handleCloseTab = (tabId: string) => {
+    if (tabId === 'home') return;
+
+    setTabs((prev) => {
+      const newTabs = prev.filter((t) => t.id !== tabId);
+      if (activeTabId === tabId) {
+        // Switch to the previous tab or home
+        const closingIndex = prev.findIndex((t) => t.id === tabId);
+        const nextActive = newTabs[closingIndex - 1] || newTabs[0] || HOME_TAB;
+        setActiveTabId(nextActive.id);
+      }
+      return newTabs;
+    });
+  };
+
+  // Filtered services for the home view
   const filteredServices = useMemo(() => {
     return services.filter((srv) => {
-      // Backend services toggle
       if (!settings.showBackendServices && !srv.hasWebUi) {
         return false;
       }
-      // Category filter
       if (selectedCategory !== 'Tutti' && srv.category !== selectedCategory) {
         return false;
       }
-      // Search query filter
       if (searchQuery.trim().length > 0) {
         const q = searchQuery.toLowerCase();
         const matchName = srv.name.toLowerCase().includes(q);
@@ -125,15 +213,12 @@ export const App: React.FC = () => {
     });
   }, [services, selectedCategory, searchQuery, settings.showBackendServices]);
 
-  // Group services by category
   const categoriesList: ServiceCategory[] = ['Domotica', 'Media', 'Automazione', 'Infrastruttura', 'Altro'];
 
-  // Pinned services
   const pinnedServices = useMemo(() => {
     return filteredServices.filter((s) => s.isPinned);
   }, [filteredServices]);
 
-  // Handlers
   const handleTogglePin = (id: string) => {
     setServices((prev) =>
       prev.map((s) => (s.id === id ? { ...s, isPinned: !s.isPinned } : s))
@@ -161,16 +246,9 @@ export const App: React.FC = () => {
     localStorage.removeItem(STORAGE_KEY_SERVICES);
   };
 
-  // If a service is currently opened in embedded view
-  if (activeService) {
-    return (
-      <EmbeddedViewer
-        service={activeService}
-        settings={settings}
-        onBack={() => setActiveService(null)}
-      />
-    );
-  }
+  const iframeTabs = useMemo(() => {
+    return tabs.filter((t) => t.id !== 'home');
+  }, [tabs]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500/20 selection:text-cyan-300">
@@ -181,79 +259,82 @@ export const App: React.FC = () => {
         <div className="absolute bottom-[-10%] left-[30%] w-[50%] h-[40%] rounded-full bg-purple-600/10 blur-[150px]" />
       </div>
 
-      {/* Top Header / App Bar */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80 px-4 sm:px-8 py-3.5 transition-all">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Logo & Server Status */}
-          <div className="flex items-center justify-between w-full md:w-auto gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1px] shadow-lg shadow-cyan-950/50">
-                <div className="w-full h-full bg-slate-950 rounded-2xl flex items-center justify-center">
-                  <Boxes className="w-5 h-5 text-cyan-400" />
+      {/* Top Application Bar with Window Controls Overlay & Drag region */}
+      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 px-4 sm:px-6 py-2.5 transition-all titlebar-drag">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-2.5">
+          {/* Logo, Server IP & Status */}
+          <div className="flex items-center justify-between w-full md:w-auto gap-3 titlebar-no-drag">
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={() => setActiveTabId('home')}
+                className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1px] shadow-lg shadow-cyan-950/50 hover:scale-105 transition-transform"
+                title="Torna alla Home"
+              >
+                <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center">
+                  <Boxes className="w-4 h-4 text-cyan-400" />
                 </div>
-              </div>
+              </button>
               <div>
                 <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-lg tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                  <h1 className="font-bold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
                     HomeServer Hub
                   </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                  <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                     Online
                   </span>
                 </div>
                 <button
                   onClick={() => setIsSettingsOpen(true)}
-                  className="text-xs text-slate-400 hover:text-cyan-300 font-mono transition-colors flex items-center gap-1"
-                  title="Fai clic per modificare l'IP o il dominio del server"
+                  className="text-[11px] text-slate-400 hover:text-cyan-300 font-mono transition-colors flex items-center gap-1 leading-none"
+                  title="Modifica IP o hostname server"
                 >
-                  <Server className="w-3 h-3 text-cyan-500" />
+                  <Server className="w-2.5 h-2.5 text-cyan-500" />
                   <span>{settings.serverHost}</span>
                 </button>
               </div>
             </div>
 
-            {/* Mobile PWA install & Settings */}
-            <div className="flex items-center gap-2 md:hidden">
+            {/* Mobile Actions */}
+            <div className="flex items-center gap-1.5 md:hidden">
+              <button
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+                title="Command Palette (Ctrl+K)"
+              >
+                <Command className="w-3.5 h-3.5" />
+              </button>
               <PwaInstallBanner />
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="p-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white"
+                className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
               >
-                <SettingsIcon className="w-4 h-4" />
+                <SettingsIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
-          {/* Search bar */}
-          <div className="w-full md:max-w-md relative flex items-center">
-            <Search className="w-4 h-4 absolute left-3.5 text-slate-500" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cerca microservizio, porta, stack... (premi '/')"
-              className="w-full bg-slate-900/90 border border-slate-800/90 rounded-2xl pl-10 pr-10 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500/60 focus:ring-1 focus:ring-cyan-500/30 transition-all shadow-inner"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 text-xs text-slate-500 hover:text-slate-300"
-              >
-                ✕
-              </button>
-            )}
-            {!searchQuery && (
-              <kbd className="hidden sm:inline-flex absolute right-3 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700/60 text-[10px] text-slate-400 font-mono">
-                /
-              </kbd>
-            )}
+          {/* Center: Command Palette Trigger button */}
+          <div className="w-full md:max-w-md flex items-center gap-2 titlebar-no-drag">
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-850 border border-slate-800/90 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-all shadow-inner group"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                <span className="truncate">Cerca microservizio o esegui comandi...</span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-[10px] font-mono text-slate-400 group-hover:text-cyan-300">
+                  Ctrl K
+                </kbd>
+              </div>
+            </button>
           </div>
 
           {/* Actions & Utilities (Desktop) */}
-          <div className="hidden md:flex items-center gap-3">
-            <div className="font-mono text-xs text-slate-400 px-3 py-1.5 rounded-xl bg-slate-900/60 border border-slate-800">
+          <div className="hidden md:flex items-center gap-2 titlebar-no-drag">
+            <div className="font-mono text-[11px] text-slate-400 px-2.5 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
               {currentTime}
             </div>
 
@@ -264,144 +345,124 @@ export const App: React.FC = () => {
                 setServiceToEdit(null);
                 setIsServiceModalOpen(true);
               }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-medium transition-all"
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-medium transition-all"
             >
-              <Plus className="w-4 h-4 text-cyan-400" />
-              <span>Nuovo Servizio</span>
+              <Plus className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Nuovo</span>
             </button>
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
               title="Impostazioni"
             >
-              <SettingsIcon className="w-4 h-4" />
+              <SettingsIcon className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 space-y-8">
-        {/* Category Pills & Quick Filter */}
-        <div className="flex items-center justify-between gap-4 overflow-x-auto pb-1 no-scrollbar">
-          <div className="flex items-center gap-2">
-            {['Tutti', ...categoriesList].map((category) => {
-              const count =
-                category === 'Tutti'
-                  ? services.filter((s) => settings.showBackendServices || s.hasWebUi).length
-                  : services.filter(
-                      (s) =>
-                        s.category === category &&
-                        (settings.showBackendServices || s.hasWebUi)
-                    ).length;
+      {/* Multi-Tab Bar */}
+      <TabBar
+        tabs={tabs}
+        activeTabId={activeTabId}
+        onSelectTab={(tabId) => setActiveTabId(tabId)}
+        onCloseTab={handleCloseTab}
+        onNewTabClick={() => setIsCommandPaletteOpen(true)}
+      />
 
-              const isSelected = selectedCategory === category;
+      {/* Main View Area: Dashboard Tab (DOM kept alive) */}
+      <div
+        style={{ display: activeTabId === 'home' ? 'flex' : 'none' }}
+        className="flex-1 flex-col"
+      >
+        <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6">
+          {/* Interactive Mini-Widgets (MeTube downloader, Portainer hub, Audio) */}
+          {settings.enableWidgets !== false && (
+            <WidgetsBar
+              services={services}
+              settings={settings}
+              onOpenServiceTab={handleOpenService}
+            />
+          )}
 
-              return (
-                <button
-                  key={category}
-                  onClick={() => setSelectedCategory(category)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-                    isSelected
-                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-950'
-                      : 'bg-slate-900/60 hover:bg-slate-850 text-slate-400 hover:text-slate-200 border border-slate-800/80'
-                  }`}
-                >
-                  <span>{category}</span>
-                  <span
-                    className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+          {/* Category Pills & Instant Filter Input */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-800/80">
+            {/* Category Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {['Tutti', ...categoriesList].map((category) => {
+                const count =
+                  category === 'Tutti'
+                    ? services.filter((s) => settings.showBackendServices || s.hasWebUi).length
+                    : services.filter(
+                        (s) =>
+                          s.category === category &&
+                          (settings.showBackendServices || s.hasWebUi)
+                      ).length;
+
+                const isSelected = selectedCategory === category;
+
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
                       isSelected
-                        ? 'bg-cyan-500/30 text-cyan-200'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm shadow-cyan-950'
+                        : 'bg-slate-900/60 hover:bg-slate-850 text-slate-400 hover:text-slate-200 border border-slate-800/80'
                     }`}
                   >
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Pinned / Favorites Section */}
-        {pinnedServices.length > 0 && selectedCategory === 'Tutti' && !searchQuery && (
-          <section className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400/90">
-              <Star className="w-4 h-4 fill-amber-400" />
-              <span>Preferiti Rapidi</span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              {pinnedServices.map((service) => (
-                <ServiceCard
-                  key={`pinned-${service.id}`}
-                  service={service}
-                  settings={settings}
-                  onSelect={(s) => setActiveService(s)}
-                  onEdit={(s) => {
-                    setServiceToEdit(s);
-                    setIsServiceModalOpen(true);
-                  }}
-                  onTogglePin={handleTogglePin}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Category Sections or Flat List */}
-        {selectedCategory === 'Tutti' && !searchQuery ? (
-          categoriesList.map((cat) => {
-            const catServices = filteredServices.filter((s) => s.category === cat);
-            if (catServices.length === 0) return null;
-
-            return (
-              <section key={cat} className="space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                  <h2 className="font-semibold text-base text-slate-200 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                    {cat}
-                    <span className="text-xs font-normal text-slate-500">
-                      ({catServices.length})
+                    <span>{category}</span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                        isSelected
+                          ? 'bg-cyan-500/30 text-cyan-200'
+                          : 'bg-slate-800 text-slate-400'
+                      }`}
+                    >
+                      {count}
                     </span>
-                  </h2>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {catServices.map((service) => (
-                    <ServiceCard
-                      key={service.id}
-                      service={service}
-                      settings={settings}
-                      onSelect={(s) => setActiveService(s)}
-                      onEdit={(s) => {
-                        setServiceToEdit(s);
-                        setIsServiceModalOpen(true);
-                      }}
-                      onTogglePin={handleTogglePin}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })
-        ) : (
-          <section className="space-y-3">
-            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-              <h2 className="font-semibold text-base text-slate-200">
-                {searchQuery ? `Risultati per "${searchQuery}"` : selectedCategory}
-                <span className="text-xs font-normal text-slate-500 ml-2">
-                  ({filteredServices.length})
-                </span>
-              </h2>
+                  </button>
+                );
+              })}
             </div>
-            {filteredServices.length > 0 ? (
+
+            {/* In-page Fast Filter */}
+            <div className="relative flex items-center min-w-[220px]">
+              <Search className="w-3.5 h-3.5 absolute left-3 text-slate-500" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Filtra servizi... (premi '/')"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-8 pr-7 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 text-slate-500 hover:text-slate-300"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Pinned / Favorites Section */}
+          {pinnedServices.length > 0 && selectedCategory === 'Tutti' && !searchQuery && (
+            <section className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400/90">
+                <Star className="w-3.5 h-3.5 fill-amber-400" />
+                <span>Preferiti Rapidi</span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {filteredServices.map((service) => (
+                {pinnedServices.map((service) => (
                   <ServiceCard
-                    key={service.id}
+                    key={`pinned-${service.id}`}
                     service={service}
                     settings={settings}
-                    onSelect={(s) => setActiveService(s)}
+                    onSelect={handleOpenService}
                     onEdit={(s) => {
                       setServiceToEdit(s);
                       setIsServiceModalOpen(true);
@@ -410,48 +471,130 @@ export const App: React.FC = () => {
                   />
                 ))}
               </div>
-            ) : (
-              <div className="py-16 flex flex-col items-center justify-center text-center p-6 bg-slate-900/30 rounded-3xl border border-slate-800/60">
-                <Search className="w-10 h-10 text-slate-600 mb-3" />
-                <h3 className="text-base font-semibold text-slate-300">Nessun microservizio trovato</h3>
-                <p className="text-xs text-slate-500 max-w-sm mt-1">
-                  Nessun servizio corrisponde ai criteri di ricerca. Prova con un altro termine o aggiungi un nuovo servizio.
-                </p>
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="mt-4 px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-medium text-slate-200 transition-colors"
-                >
-                  Cancella filtro ricerca
-                </button>
+            </section>
+          )}
+
+          {/* Categories Grid or Filtered List */}
+          {selectedCategory === 'Tutti' && !searchQuery ? (
+            categoriesList.map((cat) => {
+              const catServices = filteredServices.filter((s) => s.category === cat);
+              if (catServices.length === 0) return null;
+
+              return (
+                <section key={cat} className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <h2 className="font-semibold text-sm text-slate-200 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                      {cat}
+                      <span className="text-xs font-normal text-slate-500">
+                        ({catServices.length})
+                      </span>
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {catServices.map((service) => (
+                      <ServiceCard
+                        key={service.id}
+                        service={service}
+                        settings={settings}
+                        onSelect={handleOpenService}
+                        onEdit={(s) => {
+                          setServiceToEdit(s);
+                          setIsServiceModalOpen(true);
+                        }}
+                        onTogglePin={handleTogglePin}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })
+          ) : (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                <h2 className="font-semibold text-sm text-slate-200">
+                  {searchQuery ? `Risultati per "${searchQuery}"` : selectedCategory}
+                  <span className="text-xs font-normal text-slate-500 ml-2">
+                    ({filteredServices.length})
+                  </span>
+                </h2>
               </div>
-            )}
-          </section>
-        )}
-      </main>
+              {filteredServices.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {filteredServices.map((service) => (
+                    <ServiceCard
+                      key={service.id}
+                      service={service}
+                      settings={settings}
+                      onSelect={handleOpenService}
+                      onEdit={(s) => {
+                        setServiceToEdit(s);
+                        setIsServiceModalOpen(true);
+                      }}
+                      onTogglePin={handleTogglePin}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="py-16 flex flex-col items-center justify-center text-center p-6 bg-slate-900/30 rounded-3xl border border-slate-800/60">
+                  <Search className="w-10 h-10 text-slate-600 mb-3" />
+                  <h3 className="text-base font-semibold text-slate-300">Nessun microservizio trovato</h3>
+                  <p className="text-xs text-slate-500 max-w-sm mt-1">
+                    Nessun servizio corrisponde ai criteri di ricerca.
+                  </p>
+                </div>
+              )}
+            </section>
+          )}
+        </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 bg-slate-950/70 py-4 px-4 sm:px-8 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-4">
-            <span>
-              <strong>{services.length}</strong> container totali
-            </span>
-            <span>•</span>
-            <span>
-              <strong>{services.filter((s) => s.hasWebUi).length}</strong> con Web UI
-            </span>
-            <span>•</span>
-            <span>
-              Host: <code className="text-slate-400">{settings.serverHost}</code>
-            </span>
+        {/* Footer */}
+        <footer className="border-t border-slate-800/80 bg-slate-950/70 py-3 px-4 sm:px-6 text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <span><strong>{services.length}</strong> container</span>
+              <span>•</span>
+              <span><strong>{services.filter((s) => s.hasWebUi).length}</strong> con Web UI</span>
+              <span>•</span>
+              <span>Host: <code className="text-slate-400 font-mono">{settings.serverHost}</code></span>
+            </div>
+            <div className="flex items-center gap-3 text-[11px]">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1 rounded bg-slate-900 border border-slate-800 text-[10px]">Ctrl+K</kbd> Command Palette
+              </span>
+              <span>•</span>
+              <span>Windows 11 PWA Multi-Tab</span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span>Installabile come Web App su Windows (PWA)</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
 
-      {/* Modals */}
+      {/* Embedded Iframe Tabs: Kept in DOM so switching never reloads! */}
+      {iframeTabs.map((tab) => (
+        <EmbeddedViewer
+          key={tab.id}
+          tab={tab}
+          isActive={tab.id === activeTabId}
+          onCloseTab={() => handleCloseTab(tab.id)}
+        />
+      ))}
+
+      {/* Command Palette Modal (Ctrl + K) */}
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        services={services}
+        settings={settings}
+        onSelectService={handleOpenService}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        onNewService={() => {
+          setServiceToEdit(null);
+          setIsServiceModalOpen(true);
+        }}
+        onSelectCategory={(cat) => setSelectedCategory(cat)}
+      />
+
+      {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
@@ -462,6 +605,7 @@ export const App: React.FC = () => {
         onResetServices={handleResetServices}
       />
 
+      {/* Add / Edit Service Modal */}
       <ServiceModal
         isOpen={isServiceModalOpen}
         onClose={() => {

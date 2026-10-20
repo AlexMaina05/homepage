@@ -17,6 +17,15 @@ export interface Service {
   notes?: string;
 }
 
+export interface AppTab {
+  id: string;
+  serviceId: string;
+  title: string;
+  icon: string;
+  url: string;
+  color?: string;
+}
+
 export interface AppSettings {
   serverHost: string; // e.g. "192.168.1.100" or "localhost"
   defaultProtocol: 'http' | 'https';
@@ -24,4 +33,7 @@ export interface AppSettings {
   theme: 'dark' | 'light' | 'system';
   showBackendServices: boolean;
   viewMode: 'grid' | 'compact';
+  enableWidgets: boolean;
+  portainerApiKey?: string;
+  homeAssistantToken?: string;
 }
