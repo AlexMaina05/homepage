@@ -86,6 +86,34 @@ Se preferisci avviarla direttamente dall'interfaccia di Portainer visibile nei t
 
 ---
 
+## 📱 1. Companion Mobile con QR Code Istantaneo
+
+- Ogni scheda di servizio e segnalibro dispone ora di un pulsante **QR Code**:
+  - Cliccando sull'icona QR compare una finestra modale con il codice QR ad alta risoluzione generato istantaneamente.
+  - Inquadra il QR con la fotocamera del tuo smartphone o tablet connesso alla rete Wi-Fi di casa per aprire all'istante l'interfaccia (es. *Home Assistant*, *Navidrome*, *MeTube*).
+  - Include pulsante di copia rapida dell'URL e scorciatoia per testare l'apertura.
+
+---
+
+## 🔌 2. Port Conflict Checker & Docker Helper
+
+- Raggiungibile dalla barra degli strumenti in alto o con un clic sulla scheda porte:
+  - **Mappatura automatica di tutte le porte host**: Rileva le porte utilizzate dai tuoi container e servizi (`:8123`, `:8095`, `:1984`, `:4533`, `:9080`, `:5678`, `:9000`, `:81`, `:1883`, `:5580`, `:8085`, `:3000`).
+  - **Rilevamento conflitti**: Evidenzia subito se due servizi tentano di ascoltare sulla stessa porta host.
+  - **Porte consigliate libere**: Suggerisce le porte alternative libere più comuni nel homelab (es. `8080`, `8081`, `8090`, `8888`, `9443`).
+  - **Docker Compose Generator**: Seleziona o digita una porta e genera con un clic lo snippet YAML corretto pronto da incollare in `docker-compose.yml`.
+
+---
+
+## ⚡ 6. Wake-on-LAN (WoL) Hub
+
+- Sezione dedicata per risvegliare e accendere da remoto i tuoi dispositivi hardware spenti nella LAN:
+  - Salva i tuoi dispositivi (PC Desktop da gaming, NAS Synology, Proxmox Node, console) con nome, indirizzo MAC e IP opzionale.
+  - Pulsante **"Accendi"**: invia il Magic Packet di risveglio via UDP broadcast (porta 9) e copia contestualmente negli appunti il comando nativo PowerShell per Windows.
+  - Monitoraggio dell'ultimo invio e archiviazione locale persistente salvata anche nei backup JSON.
+
+---
+
 ## 🪟 Funzionalità Avanzate Windows 11 Desktop (PWA)
 
 - **Jump List nella Barra delle Applicazioni**: Facendo clic destro sull'icona dell'app nella barra delle applicazioni di Windows, compaiono i collegamenti rapidi per aprire direttamente *Home Assistant*, *Portainer*, *Navidrome*, *MeTube* o *n8n*.

@@ -7,9 +7,10 @@ import {
   Star,
   Boxes,
   Command,
-  X
+  X,
+  Hash
 } from 'lucide-react';
-import type { Service, ServiceCategory, AppSettings, AppTab, NetworkBookmark } from './types/service';
+import type { Service, ServiceCategory, AppSettings, AppTab, NetworkBookmark, WolDevice } from './types/service';
 import { DEFAULT_SERVICES } from './data/defaultServices';
 import { DEFAULT_BOOKMARKS } from './data/defaultBookmarks';
 import { ServiceCard } from './components/ServiceCard';
@@ -23,11 +24,15 @@ import { WidgetsBar } from './components/WidgetsBar';
 import { WeatherGreeting } from './components/WeatherGreeting';
 import { HomelabBookmarks } from './components/HomelabBookmarks';
 import { ServerScratchpad } from './components/ServerScratchpad';
+import { QrCodeModal } from './components/QrCodeModal';
+import { PortCheckerModal } from './components/PortCheckerModal';
+import { WolHub } from './components/WolHub';
 import { getServiceUrl } from './utils/url';
 
 const STORAGE_KEY_SERVICES = 'homeserver_services_v1';
 const STORAGE_KEY_SETTINGS = 'homeserver_settings_v1';
 const STORAGE_KEY_BOOKMARKS = 'homeserver_bookmarks_v1';
+const STORAGE_KEY_WOL = 'homeserver_wol_v1';
 
 const DEFAULT_SETTINGS: AppSettings = {
   serverHost: window.location.hostname || '192.168.1.100',
@@ -81,6 +86,19 @@ export const App: React.FC = () => {
     return DEFAULT_BOOKMARKS;
   });
 
+  // Wol Devices State
+  const [wolDevices, setWolDevices] = useState<WolDevice[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_WOL);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading WoL devices from localStorage:', e);
+    }
+    return [];
+  });
+
   // Settings State
   const [settings, setSettings] = useState<AppSettings>(() => {
     try {
@@ -99,18 +117,33 @@ export const App: React.FC = () => {
   const [activeTabId, setActiveTabId] = useState<string>('home');
   const [closedTabsHistory, setClosedTabsHistory] = useState<AppTab[]>([]);
 
-  // UI state
+  // Modals UI state
   const [selectedCategory, setSelectedCategory] = useState<string>('Tutti');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isServiceModalOpen, setIsServiceModalOpen] = useState<boolean>(false);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState<boolean>(false);
+  const [isPortCheckerOpen, setIsPortCheckerOpen] = useState<boolean>(false);
   const [serviceToEdit, setServiceToEdit] = useState<Service | null>(null);
   const [currentTime, setCurrentTime] = useState<string>('');
 
+  // QR Code Modal State
+  const [qrModalData, setQrModalData] = useState<{
+    isOpen: boolean;
+    title: string;
+    url: string;
+    icon: string;
+    color?: string;
+  }>({
+    isOpen: false,
+    title: '',
+    url: '',
+    icon: 'Server',
+  });
+
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync services & bookmarks to localStorage
+  // Sync state to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(services));
   }, [services]);
@@ -118,6 +151,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(bookmarks));
   }, [bookmarks]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_WOL, JSON.stringify(wolDevices));
+  }, [wolDevices]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
@@ -302,8 +339,10 @@ export const App: React.FC = () => {
   const handleResetServices = () => {
     setServices(DEFAULT_SERVICES);
     setBookmarks(DEFAULT_BOOKMARKS);
+    setWolDevices([]);
     localStorage.removeItem(STORAGE_KEY_SERVICES);
     localStorage.removeItem(STORAGE_KEY_BOOKMARKS);
+    localStorage.removeItem(STORAGE_KEY_WOL);
   };
 
   // Bookmark handlers
@@ -313,6 +352,22 @@ export const App: React.FC = () => {
 
   const handleDeleteBookmark = (id: string) => {
     setBookmarks((prev) => prev.filter((b) => b.id !== id));
+  };
+
+  // WoL handlers
+  const handleAddWolDevice = (dev: WolDevice) => {
+    setWolDevices((prev) => [...prev, dev]);
+  };
+
+  const handleDeleteWolDevice = (id: string) => {
+    setWolDevices((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const handleUpdateWolDeviceLastWake = (id: string) => {
+    const timeStr = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setWolDevices((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, lastWake: timeStr } : d))
+    );
   };
 
   const iframeTabs = useMemo(() => {
@@ -407,6 +462,16 @@ export const App: React.FC = () => {
               {currentTime}
             </div>
 
+            {/* Port Checker Tool Button */}
+            <button
+              onClick={() => setIsPortCheckerOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-cyan-300 text-xs transition-colors"
+              title="Port Conflict Checker & Docker Helper"
+            >
+              <Hash className="w-3.5 h-3.5 text-cyan-400" />
+              <span className="hidden lg:inline">Porte</span>
+            </button>
+
             <PwaInstallBanner />
 
             <button
@@ -422,7 +487,7 @@ export const App: React.FC = () => {
 
             <button
               onClick={() => setIsSettingsOpen(true)}
-              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white transition-colors"
               title="Impostazioni"
             >
               <SettingsIcon className="w-3.5 h-3.5" />
@@ -460,6 +525,14 @@ export const App: React.FC = () => {
               onOpenServiceTab={handleOpenService}
             />
           )}
+
+          {/* Wake-on-LAN Hub (Feature 6) */}
+          <WolHub
+            devices={wolDevices}
+            onAddDevice={handleAddWolDevice}
+            onDeleteDevice={handleDeleteWolDevice}
+            onUpdateDeviceLastWake={handleUpdateWolDeviceLastWake}
+          />
 
           {/* Server Scratchpad & Notes (Feature 3) */}
           <ServerScratchpad
@@ -557,6 +630,18 @@ export const App: React.FC = () => {
                     }}
                     onTogglePin={handleTogglePin}
                     onMiddleClick={handleOpenService}
+                    onOpenQrCode={(s) => {
+                      const sUrl = getServiceUrl(s, settings);
+                      if (sUrl) {
+                        setQrModalData({
+                          isOpen: true,
+                          title: s.name,
+                          url: sUrl,
+                          icon: s.icon,
+                          color: s.color,
+                        });
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -593,6 +678,18 @@ export const App: React.FC = () => {
                         }}
                         onTogglePin={handleTogglePin}
                         onMiddleClick={handleOpenService}
+                        onOpenQrCode={(s) => {
+                          const sUrl = getServiceUrl(s, settings);
+                          if (sUrl) {
+                            setQrModalData({
+                              isOpen: true,
+                              title: s.name,
+                              url: sUrl,
+                              icon: s.icon,
+                              color: s.color,
+                            });
+                          }
+                        }}
                       />
                     ))}
                   </div>
@@ -623,6 +720,18 @@ export const App: React.FC = () => {
                       }}
                       onTogglePin={handleTogglePin}
                       onMiddleClick={handleOpenService}
+                      onOpenQrCode={(s) => {
+                        const sUrl = getServiceUrl(s, settings);
+                        if (sUrl) {
+                          setQrModalData({
+                            isOpen: true,
+                            title: s.name,
+                            url: sUrl,
+                            icon: s.icon,
+                            color: s.color,
+                          });
+                        }
+                      }}
                     />
                   ))}
                 </div>
@@ -686,6 +795,23 @@ export const App: React.FC = () => {
           setIsServiceModalOpen(true);
         }}
         onSelectCategory={(cat) => setSelectedCategory(cat)}
+      />
+
+      {/* Port Conflict Checker & Docker Helper Modal */}
+      <PortCheckerModal
+        isOpen={isPortCheckerOpen}
+        onClose={() => setIsPortCheckerOpen(false)}
+        services={services}
+      />
+
+      {/* QR Code Modal for Mobile Quick Launch */}
+      <QrCodeModal
+        isOpen={qrModalData.isOpen}
+        onClose={() => setQrModalData((prev) => ({ ...prev, isOpen: false }))}
+        title={qrModalData.title}
+        url={qrModalData.url}
+        icon={qrModalData.icon}
+        color={qrModalData.color}
       />
 
       {/* Settings Modal */}

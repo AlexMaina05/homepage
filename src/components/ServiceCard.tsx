@@ -1,5 +1,5 @@
 import React from 'react';
-import { ExternalLink, Star, Edit3, Globe, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { ExternalLink, Star, Edit3, Globe, AlertCircle, ArrowUpRight, QrCode } from 'lucide-react';
 import type { Service, AppSettings } from '../types/service';
 import { ServiceIcon } from './ServiceIcon';
 import { getServiceUrl, getDisplayUrl } from '../utils/url';
@@ -11,6 +11,7 @@ interface ServiceCardProps {
   onEdit: (service: Service) => void;
   onTogglePin: (serviceId: string) => void;
   onMiddleClick?: (service: Service) => void;
+  onOpenQrCode?: (service: Service) => void;
 }
 
 export const ServiceCard: React.FC<ServiceCardProps> = ({
@@ -20,6 +21,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
   onEdit,
   onTogglePin,
   onMiddleClick,
+  onOpenQrCode,
 }) => {
   const url = getServiceUrl(service, settings);
   const displayUrl = getDisplayUrl(service);
@@ -54,6 +56,13 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
     }
   };
 
+  const handleQrClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenQrCode) {
+      onOpenQrCode(service);
+    }
+  };
+
   const handlePinClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onTogglePin(service.id);
@@ -70,7 +79,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
       onAuxClick={handleAuxClick}
       className={`group relative rounded-2xl p-4 transition-all duration-200 border ${
         service.hasWebUi
-          ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-950/40 bg-slate-900/60 hover:bg-slate-800/80 border-slate-800 hover:border-cyan-500/40'
+          ? 'cursor-pointer hover:-translate-y-1 hover:shadow-xl hover:shadow-cyan-950/40 bg-slate-900/60 hover:bg-slate-850 border-slate-800 hover:border-cyan-500/40'
           : 'bg-slate-900/30 border-slate-800/50 opacity-70 cursor-default'
       }`}
     >
@@ -121,7 +130,7 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
         </div>
 
         {/* Action icons */}
-        <div className="flex items-center gap-1 opacity-80 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
           <button
             onClick={handlePinClick}
             title={service.isPinned ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti"}
@@ -135,13 +144,23 @@ export const ServiceCard: React.FC<ServiceCardProps> = ({
           </button>
 
           {service.hasWebUi && url && (
-            <button
-              onClick={handleExternalClick}
-              title="Apri in una nuova scheda del browser"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
+            <>
+              <button
+                onClick={handleQrClick}
+                title="Genera QR Code per aprire su smartphone"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+              </button>
+
+              <button
+                onClick={handleExternalClick}
+                title="Apri in una nuova scheda del browser"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-cyan-300 hover:bg-slate-800 transition-colors"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </>
           )}
 
           <button

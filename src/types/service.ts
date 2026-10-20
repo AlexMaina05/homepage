@@ -27,6 +27,15 @@ export interface NetworkBookmark {
   description?: string;
 }
 
+export interface WolDevice {
+  id: string;
+  name: string;
+  macAddress: string;
+  ip?: string;
+  icon?: string;
+  lastWake?: string;
+}
+
 export interface AppTab {
   id: string;
   serviceId: string;
@@ -54,4 +63,5 @@ export interface AppSettings {
   serverNotes?: string;
   showBookmarks?: boolean;
   showScratchpad?: boolean;
+  wolDevices?: WolDevice[];
 }
