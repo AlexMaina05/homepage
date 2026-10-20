@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Plus, LayoutDashboard, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Plus, LayoutDashboard, ChevronLeft, ChevronRight, Settings as SettingsIcon } from 'lucide-react';
 import type { AppTab } from '../types/service';
 import { ServiceIcon } from './ServiceIcon';
 
@@ -13,6 +13,7 @@ interface TabBarProps {
   canGoForward?: boolean;
   onNavigateBack?: () => void;
   onNavigateForward?: () => void;
+  onOpenSettings?: () => void;
 }
 
 export const TabBar: React.FC<TabBarProps> = ({
@@ -25,9 +26,10 @@ export const TabBar: React.FC<TabBarProps> = ({
   canGoForward = false,
   onNavigateBack,
   onNavigateForward,
+  onOpenSettings,
 }) => {
   return (
-    <div className="flex items-center bg-slate-950 border-b border-slate-800/80 px-2 pt-1 gap-1 overflow-x-auto no-scrollbar titlebar-drag">
+    <div className="flex items-center bg-slate-950 border-b border-slate-800/80 px-2 pt-1 gap-1 overflow-x-auto no-scrollbar titlebar-drag shrink-0 select-none">
       {/* Navigation history buttons (Mouse Back / Forward support) */}
       <div className="flex items-center gap-0.5 mr-1 titlebar-no-drag shrink-0">
         <button
@@ -132,11 +134,24 @@ export const TabBar: React.FC<TabBarProps> = ({
       {/* New Tab (+) Button */}
       <button
         onClick={onNewTabClick}
-        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-850 transition-colors titlebar-no-drag ml-1 shrink-0"
+        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-850 transition-colors titlebar-no-drag ml-1 shrink-0 cursor-pointer"
         title="Apri un microservizio in nuova scheda (Ctrl+K)"
       >
         <Plus className="w-3.5 h-3.5" />
       </button>
+
+      {/* Right side spacer & settings trigger */}
+      {onOpenSettings && (
+        <div className="ml-auto flex items-center titlebar-no-drag pl-2 pr-1 shrink-0">
+          <button
+            onClick={onOpenSettings}
+            className="p-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-850 transition-colors cursor-pointer"
+            title="Impostazioni Dashboard"
+          >
+            <SettingsIcon className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -51,10 +51,10 @@ export const EmbeddedViewer: React.FC<EmbeddedViewerProps> = ({
   return (
     <div
       style={{ display: isActive ? 'flex' : 'none' }}
-      className="flex-1 w-full h-full flex-col bg-slate-950 text-slate-100 select-none overflow-hidden"
+      className="flex-1 min-h-0 w-full flex flex-col bg-slate-950 text-slate-100 select-none overflow-hidden"
     >
       {/* Sub-header Controls Bar for this tab */}
-      <div className="h-10 px-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between gap-3 text-xs">
+      <div className="h-10 px-4 bg-slate-900/90 backdrop-blur-md border-b border-slate-800/80 flex items-center justify-between gap-3 text-xs shrink-0">
         {/* Left: Icon, Name and URL */}
         <div className="flex items-center gap-2.5 overflow-hidden">
           <div
@@ -126,7 +126,7 @@ export const EmbeddedViewer: React.FC<EmbeddedViewerProps> = ({
 
       {/* Frame info banner (collapsible) */}
       {showWarning && (
-        <div className="bg-slate-900/95 border-b border-cyan-900/30 px-4 py-1.5 flex items-center justify-between text-xs text-slate-300">
+        <div className="bg-slate-900/95 border-b border-cyan-900/30 px-4 py-1.5 flex items-center justify-between text-xs text-slate-300 shrink-0">
           <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
             <AlertTriangle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span>
@@ -135,15 +135,15 @@ export const EmbeddedViewer: React.FC<EmbeddedViewerProps> = ({
           </div>
           <button
             onClick={() => setShowWarning(false)}
-            className="text-slate-400 hover:text-white text-[11px] ml-4 underline shrink-0"
+            className="text-slate-400 hover:text-white text-[11px] ml-4 underline shrink-0 cursor-pointer"
           >
             Nascondi
           </button>
         </div>
       )}
 
-      {/* Main iframe container */}
-      <div className="relative flex-1 w-full bg-slate-950">
+      {/* Main iframe container (fills 100% of remaining vertical height) */}
+      <div className="relative flex-1 min-h-0 w-full bg-slate-950">
         {!hasLoaded && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-10 text-slate-400">
             <div className="w-7 h-7 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin mb-2" />
@@ -156,7 +156,7 @@ export const EmbeddedViewer: React.FC<EmbeddedViewerProps> = ({
           src={tab.url}
           title={tab.title}
           onLoad={() => setHasLoaded(true)}
-          className="w-full h-full border-0 bg-white"
+          className="absolute inset-0 w-full h-full border-0 bg-white"
           allow="camera; microphone; geolocation; fullscreen; clipboard-read; clipboard-write; autoplay"
         />
       </div>

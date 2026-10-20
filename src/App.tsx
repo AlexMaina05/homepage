@@ -509,7 +509,7 @@ export const App: React.FC = () => {
   }, [tabs]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500/20 selection:text-cyan-300">
+    <div className="h-screen w-screen overflow-hidden bg-slate-950 text-slate-100 flex flex-col selection:bg-cyan-500/20 selection:text-cyan-300">
       {/* Background glowing effects */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
         <div className="absolute top-[-10%] left-[-10%] w-[45%] h-[45%] rounded-full bg-cyan-600/10 blur-[130px]" />
@@ -517,120 +517,7 @@ export const App: React.FC = () => {
         <div className="absolute bottom-[-10%] left-[30%] w-[50%] h-[40%] rounded-full bg-purple-600/10 blur-[150px]" />
       </div>
 
-      {/* Top Application Bar with Window Controls Overlay & Drag region */}
-      <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 px-4 sm:px-6 py-2.5 transition-all titlebar-drag">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-2.5">
-          {/* Logo, Server IP & Status */}
-          <div className="flex items-center justify-between w-full md:w-auto gap-3 titlebar-no-drag">
-            <div className="flex items-center gap-2.5">
-              <button
-                onClick={() => switchTab('home')}
-                className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1px] shadow-lg shadow-cyan-950/50 hover:scale-105 transition-transform"
-                title="Torna alla Home"
-              >
-                <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center">
-                  <Boxes className="w-4 h-4 text-cyan-400" />
-                </div>
-              </button>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="font-bold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
-                    HomeServer Hub
-                  </h1>
-                  <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    Online
-                  </span>
-                </div>
-                <button
-                  onClick={() => setIsSettingsOpen(true)}
-                  className="text-[11px] text-slate-400 hover:text-cyan-300 font-mono transition-colors flex items-center gap-1 leading-none"
-                  title="Modifica IP o hostname server"
-                >
-                  <Server className="w-2.5 h-2.5 text-cyan-500" />
-                  <span>{settings.serverHost}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Mobile Actions */}
-            <div className="flex items-center gap-1.5 md:hidden">
-              <button
-                onClick={() => setIsCommandPaletteOpen(true)}
-                className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
-                title="Command Palette (Ctrl+K)"
-              >
-                <Command className="w-3.5 h-3.5" />
-              </button>
-              <PwaInstallBanner />
-              <button
-                onClick={() => setIsSettingsOpen(true)}
-                className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
-              >
-                <SettingsIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Center: Command Palette Trigger button */}
-          <div className="w-full md:max-w-md flex items-center gap-2 titlebar-no-drag">
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-850 border border-slate-800/90 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-all shadow-inner group"
-            >
-              <div className="flex items-center gap-2 truncate">
-                <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="truncate">Cerca microservizio, segnalibro o comando...</span>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-[10px] font-mono text-slate-400 group-hover:text-cyan-300">
-                  Ctrl K
-                </kbd>
-              </div>
-            </button>
-          </div>
-
-          {/* Actions & Utilities (Desktop) */}
-          <div className="hidden md:flex items-center gap-2 titlebar-no-drag">
-            <div className="font-mono text-[11px] text-slate-400 px-2.5 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
-              {currentTime}
-            </div>
-
-            {/* Port Checker Tool Button */}
-            <button
-              onClick={() => setIsPortCheckerOpen(true)}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-cyan-300 text-xs transition-colors"
-              title="Port Conflict Checker & Docker Helper"
-            >
-              <Hash className="w-3.5 h-3.5 text-cyan-400" />
-              <span className="hidden lg:inline">Porte</span>
-            </button>
-
-            <PwaInstallBanner />
-
-            <button
-              onClick={() => {
-                setServiceToEdit(null);
-                setIsServiceModalOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-medium transition-all"
-            >
-              <Plus className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Nuovo</span>
-            </button>
-
-            <button
-              onClick={() => setIsSettingsOpen(true)}
-              className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white transition-colors"
-              title="Impostazioni"
-            >
-              <SettingsIcon className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Multi-Tab Bar with Back / Forward history */}
+      {/* Multi-Tab Bar with Back / Forward history - Native Window Controls Overlay Top Bar */}
       <TabBar
         tabs={tabs}
         activeTabId={activeTabId}
@@ -641,13 +528,126 @@ export const App: React.FC = () => {
         canGoForward={canGoForward}
         onNavigateBack={handleNavigateBack}
         onNavigateForward={handleNavigateForward}
+        onOpenSettings={() => setIsSettingsOpen(true)}
       />
 
-      {/* Main View Area: Dashboard Tab (DOM kept alive) */}
+      {/* Main View Area: Dashboard Tab (DOM kept alive and scrolls independently) */}
       <div
         style={{ display: activeTabId === 'home' ? 'flex' : 'none' }}
-        className="flex-1 flex-col"
+        className="flex-1 flex-col overflow-y-auto min-h-0"
       >
+        {/* Top Application Bar for Dashboard with Logo, Server IP, Search & Quick Actions */}
+        <header className="sticky top-0 z-40 backdrop-blur-xl bg-slate-950/85 border-b border-slate-800/80 px-4 sm:px-6 py-2.5 transition-all">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2.5">
+            {/* Logo, Server IP & Status */}
+            <div className="flex items-center justify-between w-full md:w-auto gap-3">
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => switchTab('home')}
+                  className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-indigo-600 p-[1px] shadow-lg shadow-cyan-950/50 hover:scale-105 transition-transform"
+                  title="Torna alla Home"
+                >
+                  <div className="w-full h-full bg-slate-950 rounded-xl flex items-center justify-center">
+                    <Boxes className="w-4 h-4 text-cyan-400" />
+                  </div>
+                </button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="font-bold text-base tracking-tight bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
+                      HomeServer Hub
+                    </h1>
+                    <span className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Online
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="text-[11px] text-slate-400 hover:text-cyan-300 font-mono transition-colors flex items-center gap-1 leading-none"
+                    title="Modifica IP o hostname server"
+                  >
+                    <Server className="w-2.5 h-2.5 text-cyan-500" />
+                    <span>{settings.serverHost}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Actions */}
+              <div className="flex items-center gap-1.5 md:hidden">
+                <button
+                  onClick={() => setIsCommandPaletteOpen(true)}
+                  className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+                  title="Command Palette (Ctrl+K)"
+                >
+                  <Command className="w-3.5 h-3.5" />
+                </button>
+                <PwaInstallBanner />
+                <button
+                  onClick={() => setIsSettingsOpen(true)}
+                  className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300"
+                >
+                  <SettingsIcon className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Center: Command Palette Trigger button */}
+            <div className="w-full md:max-w-md flex items-center gap-2">
+              <button
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="w-full flex items-center justify-between bg-slate-900/90 hover:bg-slate-850 border border-slate-800/90 rounded-xl px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-all shadow-inner group"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="truncate">Cerca microservizio, segnalibro o comando...</span>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-[10px] font-mono text-slate-400 group-hover:text-cyan-300">
+                    Ctrl K
+                  </kbd>
+                </div>
+              </button>
+            </div>
+
+            {/* Actions & Utilities (Desktop) */}
+            <div className="hidden md:flex items-center gap-2">
+              <div className="font-mono text-[11px] text-slate-400 px-2.5 py-1 rounded-lg bg-slate-900/60 border border-slate-800">
+                {currentTime}
+              </div>
+
+              {/* Port Checker Tool Button */}
+              <button
+                onClick={() => setIsPortCheckerOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-cyan-300 text-xs transition-colors"
+                title="Port Conflict Checker & Docker Helper"
+              >
+                <Hash className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden lg:inline">Porte</span>
+              </button>
+
+              <PwaInstallBanner />
+
+              <button
+                onClick={() => {
+                  setServiceToEdit(null);
+                  setIsServiceModalOpen(true);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white border border-slate-700/60 text-xs font-medium transition-all"
+              >
+                <Plus className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Nuovo</span>
+              </button>
+
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-400 hover:text-white transition-colors"
+                title="Impostazioni"
+              >
+                <SettingsIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </header>
         <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-5 space-y-6">
           {/* Weather & Dynamic Greeting Banner */}
           <WeatherGreeting
