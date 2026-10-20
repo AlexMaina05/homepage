@@ -9,8 +9,9 @@ import {
   Command,
   X
 } from 'lucide-react';
-import type { Service, ServiceCategory, AppSettings, AppTab } from './types/service';
+import type { Service, ServiceCategory, AppSettings, AppTab, NetworkBookmark } from './types/service';
 import { DEFAULT_SERVICES } from './data/defaultServices';
+import { DEFAULT_BOOKMARKS } from './data/defaultBookmarks';
 import { ServiceCard } from './components/ServiceCard';
 import { EmbeddedViewer } from './components/EmbeddedViewer';
 import { SettingsModal } from './components/SettingsModal';
@@ -20,10 +21,13 @@ import { CommandPalette } from './components/CommandPalette';
 import { TabBar } from './components/TabBar';
 import { WidgetsBar } from './components/WidgetsBar';
 import { WeatherGreeting } from './components/WeatherGreeting';
+import { HomelabBookmarks } from './components/HomelabBookmarks';
+import { ServerScratchpad } from './components/ServerScratchpad';
 import { getServiceUrl } from './utils/url';
 
 const STORAGE_KEY_SERVICES = 'homeserver_services_v1';
 const STORAGE_KEY_SETTINGS = 'homeserver_settings_v1';
+const STORAGE_KEY_BOOKMARKS = 'homeserver_bookmarks_v1';
 
 const DEFAULT_SETTINGS: AppSettings = {
   serverHost: window.location.hostname || '192.168.1.100',
@@ -36,6 +40,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   userName: 'Alex',
   weatherCity: 'Milano',
   showWeather: true,
+  showBookmarks: true,
+  showScratchpad: true,
+  serverNotes: '',
 };
 
 const HOME_TAB: AppTab = {
@@ -59,6 +66,19 @@ export const App: React.FC = () => {
       console.error('Error loading services from localStorage:', e);
     }
     return DEFAULT_SERVICES;
+  });
+
+  // Bookmarks State
+  const [bookmarks, setBookmarks] = useState<NetworkBookmark[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_BOOKMARKS);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error('Error loading bookmarks from localStorage:', e);
+    }
+    return DEFAULT_BOOKMARKS;
   });
 
   // Settings State
@@ -90,12 +110,15 @@ export const App: React.FC = () => {
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync services to localStorage
+  // Sync services & bookmarks to localStorage
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SERVICES, JSON.stringify(services));
   }, [services]);
 
-  // Sync settings to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_BOOKMARKS, JSON.stringify(bookmarks));
+  }, [bookmarks]);
+
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
   }, [settings]);
@@ -189,7 +212,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    // Check if a tab for this service already exists
     const existingTab = tabs.find((t) => t.serviceId === service.id);
     if (existingTab) {
       setActiveTabId(existingTab.id);
@@ -279,7 +301,18 @@ export const App: React.FC = () => {
 
   const handleResetServices = () => {
     setServices(DEFAULT_SERVICES);
+    setBookmarks(DEFAULT_BOOKMARKS);
     localStorage.removeItem(STORAGE_KEY_SERVICES);
+    localStorage.removeItem(STORAGE_KEY_BOOKMARKS);
+  };
+
+  // Bookmark handlers
+  const handleAddBookmark = (newBm: NetworkBookmark) => {
+    setBookmarks((prev) => [...prev, newBm]);
+  };
+
+  const handleDeleteBookmark = (id: string) => {
+    setBookmarks((prev) => prev.filter((b) => b.id !== id));
   };
 
   const iframeTabs = useMemo(() => {
@@ -358,7 +391,7 @@ export const App: React.FC = () => {
             >
               <div className="flex items-center gap-2 truncate">
                 <Search className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
-                <span className="truncate">Cerca microservizio o esegui comandi...</span>
+                <span className="truncate">Cerca microservizio, segnalibro o comando...</span>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700/80 text-[10px] font-mono text-slate-400 group-hover:text-cyan-300">
@@ -427,6 +460,19 @@ export const App: React.FC = () => {
               onOpenServiceTab={handleOpenService}
             />
           )}
+
+          {/* Server Scratchpad & Notes (Feature 3) */}
+          <ServerScratchpad
+            notes={settings.serverNotes || ''}
+            onSaveNotes={(n) => setSettings((s) => ({ ...s, serverNotes: n }))}
+          />
+
+          {/* Homelab Network Bookmarks (Feature 3) */}
+          <HomelabBookmarks
+            bookmarks={bookmarks}
+            onAddBookmark={handleAddBookmark}
+            onDeleteBookmark={handleDeleteBookmark}
+          />
 
           {/* Category Pills & Instant Filter Input */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-slate-800/80">
@@ -599,7 +645,7 @@ export const App: React.FC = () => {
             <div className="flex items-center gap-3">
               <span><strong>{services.length}</strong> container</span>
               <span>•</span>
-              <span><strong>{services.filter((s) => s.hasWebUi).length}</strong> con Web UI</span>
+              <span><strong>{bookmarks.length}</strong> dispositivi</span>
               <span>•</span>
               <span>Host: <code className="text-slate-400 font-mono">{settings.serverHost}</code></span>
             </div>
@@ -631,6 +677,7 @@ export const App: React.FC = () => {
         isOpen={isCommandPaletteOpen}
         onClose={() => setIsCommandPaletteOpen(false)}
         services={services}
+        bookmarks={bookmarks}
         settings={settings}
         onSelectService={handleOpenService}
         onOpenSettings={() => setIsSettingsOpen(true)}

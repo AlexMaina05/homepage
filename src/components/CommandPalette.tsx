@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Plus, Settings, Download, Globe, Star, ArrowRight } from 'lucide-react';
-import type { Service, AppSettings } from '../types/service';
+import { Search, Plus, Settings, Download, Globe, Star, ArrowRight, Network } from 'lucide-react';
+import type { Service, AppSettings, NetworkBookmark } from '../types/service';
 import { ServiceIcon } from './ServiceIcon';
 import { getDisplayUrl } from '../utils/url';
 
@@ -8,6 +8,7 @@ interface CommandPaletteProps {
   isOpen: boolean;
   onClose: () => void;
   services: Service[];
+  bookmarks?: NetworkBookmark[];
   settings: AppSettings;
   onSelectService: (service: Service) => void;
   onOpenSettings: () => void;
@@ -19,6 +20,8 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   isOpen,
   onClose,
   services,
+  bookmarks = [],
+  settings: _settings,
   onSelectService,
   onOpenSettings,
   onNewService,
@@ -46,6 +49,16 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       s.description?.toLowerCase().includes(q) ||
       s.port?.toString().includes(q) ||
       s.stack?.toLowerCase().includes(q)
+    );
+  });
+
+  const matchedBookmarks = bookmarks.filter((bm) => {
+    if (!query) return true;
+    const q = query.toLowerCase();
+    return (
+      bm.name.toLowerCase().includes(q) ||
+      bm.url.toLowerCase().includes(q) ||
+      bm.description?.toLowerCase().includes(q)
     );
   });
 
@@ -99,6 +112,13 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       subtitle: s.description || s.category,
       service: s,
     })),
+    ...matchedBookmarks.map(bm => ({
+      type: 'bookmark' as const,
+      id: bm.id,
+      title: bm.name,
+      subtitle: bm.url,
+      bookmark: bm,
+    })),
     ...actions.map(a => ({
       type: 'action' as const,
       id: a.id,
@@ -127,6 +147,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
       if (current) {
         if (current.type === 'service') {
           onSelectService(current.service);
+          onClose();
+        } else if (current.type === 'bookmark') {
+          window.open(current.bookmark.url, '_blank', 'noopener,noreferrer');
           onClose();
         } else {
           current.action();
@@ -157,7 +180,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Cerca microservizio, porta o azione... (↑↓ per navigare, Invio per aprire)"
+            placeholder="Cerca microservizio, segnalibro, porta o comando... (↑↓ per navigare, Invio per aprire)"
             className="w-full bg-transparent text-sm text-slate-100 placeholder-slate-500 focus:outline-none"
           />
           <kbd className="hidden sm:inline-block px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 border border-slate-700 text-slate-400">
@@ -254,6 +277,48 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 );
               }
 
+              if (item.type === 'bookmark') {
+                const bm = item.bookmark;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => {
+                      window.open(bm.url, '_blank', 'noopener,noreferrer');
+                      onClose();
+                    }}
+                    onMouseEnter={() => setSelectedIndex(idx)}
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all ${
+                      isSelected
+                        ? 'bg-blue-950/40 border border-blue-500/40 text-white'
+                        : 'hover:bg-slate-800/60 text-slate-300 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                        <Network className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm leading-tight block">
+                            {bm.name}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded text-[10px] bg-slate-800 text-blue-300 font-mono">
+                            Segnalibro
+                          </span>
+                        </div>
+                        <span className="text-[11px] text-slate-400 block font-mono">
+                          {bm.url}
+                        </span>
+                      </div>
+                    </div>
+
+                    {isSelected && (
+                      <ArrowRight className="w-4 h-4 text-blue-400 animate-pulse" />
+                    )}
+                  </div>
+                );
+              }
+
               // Action Item
               const IconComp = item.icon || Plus;
               return (
@@ -265,7 +330,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                     isSelected
                       ? 'bg-indigo-950/40 border border-indigo-500/40 text-white'
                       : 'hover:bg-slate-800/60 text-slate-300 border border-transparent'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-400 flex items-center justify-center shrink-0">
@@ -297,7 +362,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">↑↓</kbd> Naviga
             </span>
             <span>
-              <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Invio</kbd> Apri Scheda
+              <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Invio</kbd> Apri
             </span>
             <span>
               <kbd className="px-1 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">Esc</kbd> Chiudi

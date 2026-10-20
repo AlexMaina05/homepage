@@ -17,6 +17,16 @@ export interface Service {
   notes?: string;
 }
 
+export interface NetworkBookmark {
+  id: string;
+  name: string;
+  url: string;
+  icon: string;
+  category: 'Network' | 'Repository' | 'Hardware' | 'Altro';
+  color?: string;
+  description?: string;
+}
+
 export interface AppTab {
   id: string;
   serviceId: string;
@@ -41,4 +51,7 @@ export interface AppSettings {
   weatherLatitude?: number;
   weatherLongitude?: number;
   showWeather?: boolean;
+  serverNotes?: string;
+  showBookmarks?: boolean;
+  showScratchpad?: boolean;
 }

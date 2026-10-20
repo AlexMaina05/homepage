@@ -1,6 +1,6 @@
 # 🚀 HomeServer Hub - Dashboard & PWA Microservizi
 
-Dashboard web moderna, reattiva e installabile come **Web App (PWA) nativa su Windows 11/10** (con Window Controls Overlay, Jump List nella barra delle applicazioni, Command Palette, sistema Multi-Tab, Meteo locale e scorciatoie avanzate) per accedere e gestire tutti i microservizi del tuo server.
+Dashboard web moderna, reattiva e installabile come **Web App (PWA) nativa su Windows 11/10** (con Window Controls Overlay, Jump List nella barra delle applicazioni, Command Palette, sistema Multi-Tab, Meteo locale, Segnalibri di Rete e Scratchpad note) per accedere e gestire tutti i microservizi del tuo server.
 
 ---
 
@@ -29,13 +29,32 @@ Se preferisci avviarla direttamente dall'interfaccia di Portainer visibile nei t
 
 ---
 
+## 🌐 3. Dispositivi di Rete & Scratchpad Note
+
+### Segnalibri Homelab
+- Sezione dedicata per tutti i dispositivi fisici e link utili che non sono container Docker:
+  - **Gateway Router / Modem** (`192.168.1.1`)
+  - **Gitea Locale** (`localhost:3000`)
+  - **GitHub Remote**
+  - **Cloudflare Zero Trust Dashboard**
+- Pulsante **"Aggiungi Segnalibro"** per salvare indirizzi IP di Switch, Access Point, Proxmox, NAS o stampanti di rete con colore e icona dedicati.
+- Tutti i segnalibri sono integrati e cercabili all'istante anche dalla **Command Palette (`Ctrl+K`)**.
+
+### Scratchpad & Note Server
+- Blocco note rapido espandibile salvato automaticamente nel browser e incluso nei backup JSON:
+  - Precompilato con cheatsheet per subnet, porte principali e comandi `docker compose` frequenti.
+  - Pulsante per copiare l'intero testo negli appunti con un clic.
+  - Conteggio caratteri e indicatore visivo di autosave.
+
+---
+
 ## ⌨️ Scorciatoie da Tastiera & Mouse
 
 | Scorciatoia | Azione |
 | :--- | :--- |
-| **`Ctrl + K`** | Apri la **Command Palette** rapida (stile Spotlight/Raycast) |
+| **`Ctrl + K`** | Apri la **Command Palette** rapida (stile Spotlight/Raycast per servizi, segnalibri e azioni) |
 | **`Alt + 1` .. `Alt + 9`** | Salta all'istante alla scheda corrispondente (Alt+1 = Dashboard) |
-| **`Ctrl + Shift + T`** | Riapri l'ultima scheda chiusa (come nei browser moderni) |
+| **`Ctrl + Shift + T`** | Riapri l'ultima scheda chiusa (con cronologia sessione) |
 | **`Ctrl + W`** o **`ESC`** | Chiudi la scheda corrente e torna alla Dashboard |
 | **`/`** | Metti a fuoco il campo di ricerca e filtraggio dei servizi |
 | **Click con rotellina (tasto centrale)** | Clicca su una card per aprirla in una nuova scheda; clicca su una tab per chiuderla |
